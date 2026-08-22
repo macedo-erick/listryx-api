@@ -56,6 +56,11 @@ export async function call<T>(
   };
 }
 
+export interface TestAppOptions {
+  readonly config?: Partial<Config>;
+  readonly realAuth?: boolean;
+}
+
 export interface TestHarness {
   readonly app: INestApplication;
   readonly db: Database;
@@ -64,20 +69,23 @@ export interface TestHarness {
   close(): Promise<void>;
 }
 
-export async function startTestApp(): Promise<TestHarness> {
+export async function startTestApp(options: TestAppOptions = {}): Promise<TestHarness> {
   const databaseUrl = inject('databaseUrl');
-  const config = configFor(databaseUrl);
+  const config = { ...configFor(databaseUrl), ...options.config };
 
   const migrator = createDatabase(databaseUrl, { max: 1, quiet: true });
   await migrate(migrator.db, { migrationsFolder: MIGRATIONS_FOLDER });
   await migrator.close();
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  const builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(CONFIG)
-    .useValue(config)
-    .overrideGuard(JwtGuard)
-    .useClass(FakeAuthGuard)
-    .compile();
+    .useValue(config);
+
+  if (options.realAuth !== true) {
+    builder.overrideGuard(JwtGuard).useClass(FakeAuthGuard);
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api', { exclude: ['health', 'metrics'] });
