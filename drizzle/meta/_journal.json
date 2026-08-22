@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787338020250,
+      "tag": "0000_create_lists_and_templates",
+      "breakpoints": true
+    }
+  ]
+}
