@@ -18,12 +18,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+
+      # Before setup-node, not after: the `yarn` cache mode asks the yarn on PATH where its
+      # cache lives, and the runner's preinstalled yarn is 1.x, which answers for a different
+      # directory than the Yarn 4 pinned in package.json.
+      - run: corepack enable
+
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: yarn
-      - run: corepack enable
+
       - run: yarn install --immutable
       - run: yarn lint
       - run: yarn format:check
@@ -34,7 +40,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
