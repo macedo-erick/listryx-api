@@ -238,3 +238,137 @@ describe('list totals', () => {
     expect(totals.body).toHaveLength(0);
   });
 });
+
+describe('windows and filters', () => {
+  it('takes both ends of a window, inclusive', async () => {
+    const owner = harness.newOwner();
+
+    await pricedList(owner, 'Before', '2026-01-31T23:59:59Z', [{ text: 'x', unitPrice: '1.00' }]);
+    await pricedList(owner, 'On the edge', '2026-02-01T00:00:00Z', [
+      { text: 'x', unitPrice: '2.00' },
+    ]);
+    await pricedList(owner, 'Inside', '2026-02-15T12:00:00Z', [{ text: 'x', unitPrice: '3.00' }]);
+    await pricedList(owner, 'After', '2026-03-01T00:00:01Z', [{ text: 'x', unitPrice: '4.00' }]);
+
+    const windowed = await call<ListTotalPointResponse[]>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/list-totals?from=2026-02-01T00:00:00Z&to=2026-03-01T00:00:00Z',
+    );
+
+    expect(windowed.body.map((point) => point.name)).toEqual(['On the edge', 'Inside']);
+  });
+
+  it('leaves out a list nobody priced, and counts only the priced items of one', async () => {
+    const owner = harness.newOwner();
+    const unpriced = await call<ListResponse>(harness, owner, 'POST', '/api/lists', {
+      name: 'Nothing priced',
+    });
+
+    await call(harness, owner, 'POST', `/api/lists/${unpriced.body.id}/items`, { text: 'leite' });
+    await closeOn(owner, unpriced.body.id, '2026-01-05T12:00:00Z');
+
+    const mixed = await pricedList(owner, 'Half priced', '2026-01-06T12:00:00Z', [
+      { text: 'café', unitPrice: '18.00' },
+    ]);
+
+    await call(harness, owner, 'POST', `/api/lists/${mixed.id}/items`, { text: 'guardanapo' });
+
+    const totals = await call<ListTotalPointResponse[]>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/list-totals',
+    );
+
+    expect(totals.body.map((point) => point.name)).toEqual(['Half priced']);
+    expect(totals.body[0]!.itemCount).toBe(1);
+    expect(totals.body[0]!.total).toBe('18.00');
+  });
+
+  it('refuses a window bound that is not a timestamp', async () => {
+    const owner = harness.newOwner();
+
+    const bad = await call<{ message: string }>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/list-totals?from=yesterday',
+    );
+
+    expect(bad.status).toBe(400);
+    expect(bad.body.message).toContain('from');
+  });
+
+  it('asks for the item whose prices are wanted', async () => {
+    const owner = harness.newOwner();
+
+    const missing = await call<{ message: string }>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/item-prices',
+    );
+    const blank = await call(harness, owner, 'GET', '/api/insights/item-prices?text=%20%20');
+    const unknown = await call<ItemPricePointResponse[]>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/item-prices?text=never%20bought',
+    );
+
+    expect(missing.status).toBe(400);
+    expect(missing.body.message).toContain('text');
+    expect(blank.status).toBe(400);
+    expect(unknown.status).toBe(200);
+    expect(unknown.body).toEqual([]);
+  });
+});
+
+describe('the catalogue of priced items', () => {
+  it('shows the most recent spelling and skips what was never priced', async () => {
+    const owner = harness.newOwner();
+
+    await pricedList(owner, 'One', '2026-01-10T12:00:00Z', [{ text: 'leite', unitPrice: '4.20' }]);
+    await pricedList(owner, 'Two', '2026-02-10T12:00:00Z', [
+      { text: 'Leite', unitPrice: '4.90' },
+      { text: 'sal', unitPrice: '2.00' },
+    ]);
+
+    const unpriced = await call<ListResponse>(harness, owner, 'POST', '/api/lists', {
+      name: 'Free',
+    });
+
+    await call(harness, owner, 'POST', `/api/lists/${unpriced.body.id}/items`, { text: 'água' });
+
+    const items = await call<PricedItemResponse[]>(harness, owner, 'GET', '/api/insights/items');
+
+    expect(items.body.map((item) => item.text)).toEqual(['Leite', 'sal']);
+    expect(items.body[0]!.observationCount).toBe(2);
+    expect(items.body[0]!.latestPrice).toBe('4.90');
+    expect(items.body[0]!.latestAt).toMatch(/^2026-02-10T/);
+  });
+
+  it('prices a repeat purchase from the newest observation, whatever the list order', async () => {
+    const owner = harness.newOwner();
+
+    await pricedList(owner, 'Newest first', '2026-05-10T12:00:00Z', [
+      { text: 'arroz', unitPrice: '25.00' },
+    ]);
+    await pricedList(owner, 'Older, added later', '2026-04-10T12:00:00Z', [
+      { text: 'arroz', unitPrice: '19.00' },
+    ]);
+
+    const items = await call<PricedItemResponse[]>(harness, owner, 'GET', '/api/insights/items');
+    const series = await call<ItemPricePointResponse[]>(
+      harness,
+      owner,
+      'GET',
+      '/api/insights/item-prices?text=arroz',
+    );
+
+    expect(items.body[0]!.latestPrice).toBe('25.00');
+    expect(series.body.map((point) => point.unitPrice)).toEqual(['19.00', '25.00']);
+  });
+});
