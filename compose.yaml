@@ -32,8 +32,8 @@ services:
     ports:
       - '127.0.0.1:8089:8080'
     volumes:
-      - ../../planelyx/auth/realms/listryx.json:/opt/keycloak/data/import/listryx.json:ro
-      - ../../planelyx/auth/themes/listryx:/opt/keycloak/themes/listryx:ro
+      - ../../auth/realms/listryx.json:/opt/keycloak/data/import/listryx.json:ro
+      - ../../auth/themes/listryx:/opt/keycloak/themes/listryx:ro
       - listryx-keycloak-data:/opt/keycloak/data
     healthcheck:
       test:
