@@ -26,7 +26,7 @@ async function newList(owner: string, name: string): Promise<ListResponse> {
 async function addItem(
   owner: string,
   listId: string,
-  item: { text: string; quantity?: string; unitPrice?: string },
+  item: { text: string; category?: string; quantity?: string; unitPrice?: string },
 ): Promise<ListResponse> {
   const added = await call<ListResponse>(
     harness,
@@ -140,6 +140,35 @@ describe('the core loop', () => {
 
     expect(cleared.body.items[0]!.unitPrice).toBeNull();
     expect(cleared.body.total).toBeNull();
+  });
+
+  it('assigns, changes and clears an item category', async () => {
+    const owner = harness.newOwner();
+    const list = await newList(owner, 'Grocery run');
+    const withItem = await addItem(owner, list.id, { text: 'milk', category: 'Dairy' });
+    const item = withItem.items[0]!;
+
+    expect(item.category).toBe('Dairy');
+
+    const recategorized = await call<ListResponse>(
+      harness,
+      owner,
+      'PATCH',
+      `/api/lists/${list.id}/items/${item.id}`,
+      { category: 'Fridge' },
+    );
+
+    expect(recategorized.body.items[0]!.category).toBe('Fridge');
+
+    const cleared = await call<ListResponse>(
+      harness,
+      owner,
+      'PATCH',
+      `/api/lists/${list.id}/items/${item.id}`,
+      { category: null },
+    );
+
+    expect(cleared.body.items[0]!.category).toBeNull();
   });
 
   it('reorders in one call and refuses a partial ordering', async () => {
@@ -301,6 +330,40 @@ describe('templates', () => {
     const reread = await call<ListResponse>(harness, owner, 'GET', `/api/lists/${list.id}`);
 
     expect(reread.body.templateId).toBeNull();
+  });
+
+  it('carries item categories through a template in both directions', async () => {
+    const owner = harness.newOwner();
+    const template = await call<TemplateResponse>(harness, owner, 'POST', '/api/templates', {
+      name: 'Weekly groceries v2',
+      items: [{ text: 'leite', category: 'Dairy' }, { text: 'pão' }],
+    });
+
+    expect(template.body.items.map((item) => item.category)).toEqual(['Dairy', null]);
+
+    const list = await call<ListResponse>(harness, owner, 'POST', '/api/lists', {
+      name: 'Saturday run v2',
+      templateId: template.body.id,
+    });
+
+    expect(list.body.items.map((item) => item.category)).toEqual(['Dairy', null]);
+
+    const saved = await call<{ templateId: string }>(
+      harness,
+      owner,
+      'POST',
+      `/api/lists/${list.body.id}/save-as-template`,
+      { name: 'Weekly groceries v3' },
+    );
+
+    const roundTripped = await call<TemplateResponse>(
+      harness,
+      owner,
+      'GET',
+      `/api/templates/${saved.body.templateId}`,
+    );
+
+    expect(roundTripped.body.items.map((item) => item.category)).toEqual(['Dairy', null]);
   });
 
   it('replaces an existing template when one is named', async () => {

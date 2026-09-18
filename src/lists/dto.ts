@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions -- db.execute<T> needs the implicit index signature only a type alias has. */
 import { z } from 'zod';
 
+import { categorySchema } from '../common/category';
 import { decimalString, optionalDecimal } from '../common/decimal';
 import { LIST_STATUSES } from '../database/schema';
 
@@ -24,6 +25,7 @@ export type ListQuery = z.infer<typeof listQuerySchema>;
 
 export const createItemSchema = z.object({
   text: z.string().trim().min(1).max(500),
+  category: categorySchema,
   quantity: optionalDecimal(2),
   unitPrice: optionalDecimal(2),
 });
@@ -32,6 +34,7 @@ export type CreateItemRequest = z.infer<typeof createItemSchema>;
 export const updateItemSchema = z
   .object({
     text: z.string().trim().min(1).max(500).optional(),
+    category: categorySchema,
     quantity: optionalDecimal(2),
     unitPrice: optionalDecimal(2),
     checked: z.boolean().optional(),
@@ -57,6 +60,7 @@ export const quantitySchema = decimalString(2);
 export type ListItemResponse = {
   readonly id: string;
   readonly text: string;
+  readonly category: string | null;
   readonly quantity: string | null;
   readonly unitPrice: string | null;
   readonly subtotal: string | null;

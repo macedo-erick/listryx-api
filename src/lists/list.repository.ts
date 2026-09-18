@@ -70,6 +70,7 @@ export class ListRepository {
       SELECT
         id,
         text,
+        category,
         quantity,
         unit_price AS "unitPrice",
         (COALESCE(quantity, 1) * unit_price)::numeric(12, 2) AS "subtotal",
@@ -134,6 +135,7 @@ export class ListRepository {
     id: string;
     listId: string;
     text: string;
+    category: string | null;
     quantity: string | null;
     unitPrice: string | null;
     sortOrder: number;
@@ -146,6 +148,7 @@ export class ListRepository {
     itemId: string,
     values: Partial<{
       text: string;
+      category: string | null;
       quantity: string | null;
       unitPrice: string | null;
       checked: boolean;
