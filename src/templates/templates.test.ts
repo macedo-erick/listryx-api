@@ -17,7 +17,7 @@ afterAll(async () => {
 async function newTemplate(
   owner: string,
   name: string,
-  items: { text: string; defaultQuantity?: string }[] = [],
+  items: { text: string; category?: string; defaultQuantity?: string }[] = [],
 ): Promise<TemplateResponse> {
   const created = await call<TemplateResponse>(harness, owner, 'POST', '/api/templates', {
     name,
@@ -43,6 +43,26 @@ describe('writing a template', () => {
     expect(template.items.map((item) => item.defaultQuantity)).toEqual(['2.00', null, '0.50']);
     expect(template.itemCount).toBe(3);
     expect(template.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it('keeps an item category, and clears it with an empty string', async () => {
+    const owner = harness.newOwner();
+    const template = await newTemplate(owner, 'Weekly', [
+      { text: 'leite', category: 'Dairy' },
+      { text: 'pão' },
+    ]);
+
+    expect(template.items.map((item) => item.category)).toEqual(['Dairy', null]);
+
+    const replaced = await call<TemplateResponse>(
+      harness,
+      owner,
+      'PUT',
+      `/api/templates/${template.id}`,
+      { name: 'Weekly', items: [{ text: 'leite', category: '' }] },
+    );
+
+    expect(replaced.body.items[0]!.category).toBeNull();
   });
 
   it('accepts a template with no items at all', async () => {

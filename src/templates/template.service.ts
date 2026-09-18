@@ -113,6 +113,7 @@ export class TemplateService {
         id: randomUUID(),
         templateId,
         text: item.text,
+        category: item.category ?? null,
         defaultQuantity: item.defaultQuantity ?? null,
         sortOrder: index,
       })),

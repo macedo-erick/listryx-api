@@ -30,6 +30,7 @@ export const listTemplateItem = pgTable(
       .notNull()
       .references(() => listTemplate.id, { onDelete: 'cascade' }),
     text: varchar('text', { length: 500 }).notNull(),
+    category: varchar('category', { length: 100 }),
     defaultQuantity: numeric('default_quantity', { precision: 10, scale: 2 }),
     sortOrder: integer('sort_order').notNull(),
   },
@@ -64,6 +65,7 @@ export const listItem = pgTable(
     normalizedText: varchar('normalized_text', { length: 500 }).generatedAlwaysAs(
       sql`lower(btrim(text))`,
     ),
+    category: varchar('category', { length: 100 }),
     quantity: numeric('quantity', { precision: 10, scale: 2 }),
     unitPrice: numeric('unit_price', { precision: 12, scale: 2 }),
     checked: boolean('checked').notNull().default(false),

@@ -7,6 +7,7 @@ import type { TemplateItemResponse, TemplateQuery, TemplateSummaryResponse } fro
 
 export interface TemplateItemSource {
   readonly text: string;
+  readonly category: string | null;
   readonly defaultQuantity: string | null;
   readonly sortOrder: number;
 }
@@ -64,6 +65,7 @@ export class TemplateRepository {
       .select({
         id: listTemplateItem.id,
         text: listTemplateItem.text,
+        category: listTemplateItem.category,
         defaultQuantity: listTemplateItem.defaultQuantity,
         sortOrder: listTemplateItem.sortOrder,
       })
