@@ -85,6 +85,7 @@ export class ListService {
             id: randomUUID(),
             listId,
             text: item.text,
+            category: item.category,
             quantity: item.defaultQuantity,
             unitPrice: prices.get(normalizeText(item.text)) ?? null,
             sortOrder: index,
@@ -150,6 +151,7 @@ export class ListService {
       id: itemId,
       listId,
       text: request.text,
+      category: request.category ?? null,
       quantity: request.quantity ?? null,
       unitPrice: request.unitPrice ?? null,
       sortOrder: await this.lists.nextSortOrder(listId),
@@ -170,6 +172,7 @@ export class ListService {
 
     const values = {
       ...(request.text !== undefined ? { text: request.text } : {}),
+      ...(request.category !== undefined ? { category: request.category } : {}),
       ...(request.quantity !== undefined ? { quantity: request.quantity } : {}),
       ...(request.unitPrice !== undefined ? { unitPrice: request.unitPrice } : {}),
       ...(request.checked !== undefined ? { checked: request.checked } : {}),
@@ -247,6 +250,7 @@ export class ListService {
             id: randomUUID(),
             templateId,
             text: item.text,
+            category: item.category,
             defaultQuantity: item.quantity,
             sortOrder: index,
           })),

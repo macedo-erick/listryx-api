@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions -- db.execute<T> needs the implicit index signature only a type alias has. */
 import { z } from 'zod';
 
+import { categorySchema } from '../common/category';
 import { optionalDecimal } from '../common/decimal';
 
 export const templateItemSchema = z.object({
   text: z.string().trim().min(1).max(500),
+  category: categorySchema,
   defaultQuantity: optionalDecimal(2),
 });
 
@@ -23,6 +25,7 @@ export type TemplateQuery = z.infer<typeof templateQuerySchema>;
 export type TemplateItemResponse = {
   readonly id: string;
   readonly text: string;
+  readonly category: string | null;
   readonly defaultQuantity: string | null;
   readonly sortOrder: number;
 };
